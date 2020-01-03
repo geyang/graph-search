@@ -1,3 +1,8 @@
+"""
+Comparison between various graph-search algorithms.
+
+reference: https://www.redblobgames.com/pathfinding/a-star/introduction.html#dijkstra
+"""
 from collections import deque
 import networkx as nx
 import numpy as np
