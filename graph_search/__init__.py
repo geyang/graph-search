@@ -2,6 +2,7 @@
 Comparison between various graph-search algorithms.
 
 reference: https://www.redblobgames.com/pathfinding/a-star/introduction.html#dijkstra
+ref_2: https://medium.com/@nicholas.w.swift/easy-a-star-pathfinding-7e6689c7f7b2
 """
 from collections import deque
 import networkx as nx
