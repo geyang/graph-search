@@ -21,6 +21,12 @@ def backtrack(link, start, goal):
 
 
 def bfs(graph: nx.Graph, start, goal=None):
+    """breath-first search
+    :param graph: a graph object
+    :param start: the starting node
+    :param goal: optional, when not supplied generates the entire path tree.
+    :return:
+    """
     frontier = deque()
     visited = dict()
 
@@ -109,19 +115,36 @@ def a_star(graph: nx.Graph, start, goal):
                 return list(backtrack(visited, start, goal))[::-1]
 
 
+def plot_trajectory_2d(path, color='black', **kwargs):
+    for (x, y), (x_, y_) in zip(path[:-1], path[1:]):
+        plt.arrow(x, y, (x_ - x) * 0.9, (y_ - y) * 0.9, **kwargs, head_width=0.1, head_length=0.1,
+                  length_includes_head=True, head_starts_at_zero=True, fc=color, ec=color)
+
+    plt.xlim(-0.5, 4.5)
+    plt.ylim(-0.5, 4.5)
+    plt.gca().set_aspect('equal')
+
+
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
 
     G = nx.grid_graph(dim=[5, 5])
-    pos = nx.spring_layout(G)
-    nx.draw(G, pos, node_size=25)
-    plt.show()
+    # pos = nx.spring_layout(G)
+    # nx.draw(G, pos, node_size=25)
+    # plt.show()
 
+    fig = plt.figure(figsize=(4, 4))
     path = bfs(G, (0, 0), (4, 4))
     print("       bfs", *path)
+    plt.subplot(2, 2, 1)
+    plt.title('Breath-first')
+    plot_trajectory_2d(path, label="bfs")
 
     path = heuristic_search(G, (0, 0), (4, 4))
-    print("heiristics", *path)
+    print("heuristics", *path)
+    plt.subplot(2, 2, 2)
+    plt.title('Heuristic Search')
+    plot_trajectory_2d(path, label="heuristics")
 
     G = nx.grid_graph(dim=[5, 5])
     G.add_edge((0, 0), (0, 1), weight=1)
@@ -130,5 +153,20 @@ if __name__ == '__main__':
     path = dijkstra(G, (0, 0), (4, 4))
     print("  dijkstra", *path)
 
+    plt.subplot(2, 2, 3)
+    plt.title('Dijkstra')
+    plot_trajectory_2d(path, label="dijkstra")
+
     path = a_star(G, (0, 0), (4, 4))
     print("        a*", *path)
+
+    plt.subplot(2, 2, 4)
+    plt.title('A*')
+    plot_trajectory_2d(path, label="A*")
+
+    plt.legend(loc="upper left", bbox_to_anchor=(0.45, 0.8), framealpha=1, frameon=False, fontsize=12)
+    from ml_logger import logger
+
+    plt.tight_layout()
+    logger.savefig("figures/comparison.png", dpi=300)
+    plt.show()

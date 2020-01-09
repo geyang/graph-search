@@ -15,6 +15,12 @@ use a grid-graph.
 
 This is reflected in the implementation in [./graph_search](./graph_search/__init__.py).
 
+<p align="center">
+   <img width="300px" height="300px"
+        alt="bfs,heuristic,dijkstra and a* algorithms" 
+        src="figures/comparison.png"/>
+</p>
+
 ## Graph Interface
 
 We need three methods:
