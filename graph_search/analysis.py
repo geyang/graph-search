@@ -42,10 +42,6 @@ def bfs(graph: nx.Graph, start, goal=None):
                 return list(backtrack(visited, start, goal))[::-1]
 
 
-def heuristic(a, b):
-    return np.linalg.norm(np.array(a) - np.array(b), ord=2) * 5
-
-
 from heapq import heapify, heappush, heappop
 
 
@@ -61,6 +57,10 @@ class PriorityQue:
 
     def __len__(self):
         return len(self.queue)
+
+
+def heuristic(a, b):
+    return np.linalg.norm(np.array(a) - np.array(b), ord=2) * 5
 
 
 def heuristic_search(graph: nx.Graph, start, goal):
@@ -156,7 +156,7 @@ if __name__ == '__main__':
     plt.subplot(2, 2, 1)
     plt.title('Breath-first')
     plot_trajectory_2d(path, label="bfs")
-    plt.scatter(*zip(*queries.keys()), color="#23aaff", linewidths=0, alpha=0.3)
+    plt.scatter(*zip(*queries.keys()), color="#23aaff", linewidths=0, alpha=0.6)
 
     queries.clear()
     path = heuristic_search(G, start, goal)
@@ -164,7 +164,7 @@ if __name__ == '__main__':
     plt.subplot(2, 2, 2)
     plt.title('Heuristic Search')
     plot_trajectory_2d(path, label="heuristics")
-    plt.scatter(*zip(*queries.keys()), color="#23aaff", linewidths=0, alpha=0.3)
+    plt.scatter(*zip(*queries.keys()), color="#23aaff", linewidths=0, alpha=0.6)
 
     G = nx.grid_graph(dim=[n, n])
     G.add_edge((0, 0), (0, 1), weight=1)
@@ -178,7 +178,7 @@ if __name__ == '__main__':
     plt.subplot(2, 2, 3)
     plt.title('Dijkstra')
     plot_trajectory_2d(path, label="dijkstra")
-    plt.scatter(*zip(*queries.keys()), color="#23aaff", linewidths=0, alpha=0.3)
+    plt.scatter(*zip(*queries.keys()), color="#23aaff", linewidths=0, alpha=0.6)
 
     queries.clear()
     path = a_star(G, start, goal)
@@ -186,7 +186,7 @@ if __name__ == '__main__':
     plt.subplot(2, 2, 4)
     plt.title('A*')
     plot_trajectory_2d(path, label="A*")
-    plt.scatter(*zip(*queries.keys()), color="#23aaff", linewidths=0, alpha=0.3)
+    plt.scatter(*zip(*queries.keys()), color="#23aaff", linewidths=0, alpha=0.6)
 
     plt.legend(loc="upper left", bbox_to_anchor=(0.45, 0.8), framealpha=1, frameon=False, fontsize=12)
     from ml_logger import logger

@@ -21,6 +21,18 @@ This is reflected in the implementation in [./graph_search](./graph_search/__ini
         src="figures/comparison.png"/>
 </p>
 
+## Prioritized Search
+
+A planning heuristic helps reduce the planning expenditure. The left column are breath-first-search and dijkstra, both do not use a planning heuristic. On the right are heuristic search and A*.
+
+The <span color="#23aaff">blue</span> colored dots represent the nodes the search algorithm has "touched". Heuristics help reduce the cost during planning.
+
+<p align="center">
+   <img width="300px" height="300px"
+        alt="bfs,heuristic,dijkstra and a* algorithms" 
+        src="figures/search_range.png"/>
+</p>
+
 ## Graph Interface
 
 We need three methods:
