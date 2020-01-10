@@ -67,6 +67,35 @@ With a learned reacheability heuristics, `plan2vec` should do better than `A*` w
 
 (The planning lenght is not computed using the weights)
 
+
+## StreetLearn Environment Planning Result
+
+We can now apply this to the StreetLearn domain. I found using an L1 metric for the heuristic and a scaling factor of 1.2 works well. When using an L2 heuristic the scaling need to be 1.7, and the search cost is high.
+
+L1 works better probably because it is Manhattan.
+
+<p align="center">
+   <img width="300px"
+        alt="bfs,heuristic,dijkstra and a* algorithms" 
+        src="figures/streetlearn_plans.png"/>
+</p>
+
+We can compare the number of distance look-ups that are required among these methods:
+
+<p align="center">
+       <img width="200px" float="left"
+            alt="planning cost of bfs,heuristic,dijkstra and a* algorithms" 
+            src="figures/streetlearn_cost.png"/>
+       <img width="200px" float="left"
+            alt="trajectory length of bfs,heuristic,dijkstra and a* algorithms" 
+            src="figures/streetlearn_length.png"/>
+</p>
+
+With a learned reacheability heuristics, `plan2vec` should do better than `A*` with a Euclidean heuristic.
+
+(The planning lenght is not computed using the weights)
+
+
 ## Graph Interface
 
 We need three methods:

@@ -4,7 +4,7 @@ Comparison between various graph-search algorithms.
 reference: https://www.redblobgames.com/pathfinding/a-star/introduction.html#dijkstra
 ref_2: https://medium.com/@nicholas.w.swift/easy-a-star-pathfinding-7e6689c7f7b2
 """
-from collections import deque, defaultdict
+from collections import deque
 import networkx as nx
 import numpy as np
 
@@ -42,6 +42,10 @@ def bfs(graph: nx.Graph, start, goal=None):
                 return list(backtrack(visited, start, goal))[::-1]
 
 
+def heuristic(a, b):
+    return np.linalg.norm(np.array(a) - np.array(b), ord=2) * 5
+
+
 from heapq import heapify, heappush, heappop
 
 
@@ -57,10 +61,6 @@ class PriorityQue:
 
     def __len__(self):
         return len(self.queue)
-
-
-def heuristic(a, b):
-    return np.linalg.norm(np.array(a) - np.array(b), ord=2) * 5
 
 
 def heuristic_search(graph: nx.Graph, start, goal):
@@ -120,77 +120,53 @@ def plot_trajectory_2d(path, color='black', **kwargs):
         plt.arrow(x, y, (x_ - x) * 0.9, (y_ - y) * 0.9, **kwargs, head_width=0.1, head_length=0.1,
                   length_includes_head=True, head_starts_at_zero=True, fc=color, ec=color)
 
-    plt.xlim(-0.5, 6.5)
-    plt.ylim(-0.5, 6.5)
+    plt.xlim(-0.5, 4.5)
+    plt.ylim(-0.5, 4.5)
     plt.gca().set_aspect('equal')
-
-
-def patch_graph(G):
-    queries = defaultdict(lambda: 0)
-    _neighbors = G.neighbors
-
-    def neighbors(n):
-        # queries[n] += 1  # no global needed bc mutable.
-        ns = list(_neighbors(n))
-        for n in ns:
-            queries[n] += 1
-        return ns
-
-    G.neighbors = neighbors
-    return queries
 
 
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
-    from collections import defaultdict
 
-    n, start, goal = 7, (0, 0), (6, 6)
-
-    G = nx.grid_graph(dim=[n, n])
-    queries = patch_graph(G)
+    G = nx.grid_graph(dim=[5, 5])
+    # pos = nx.spring_layout(G)
+    # nx.draw(G, pos, node_size=25)
+    # plt.show()
 
     fig = plt.figure(figsize=(4, 4))
-
-    path = bfs(G, start, goal)
+    path = bfs(G, (0, 0), (4, 4))
     print("       bfs", *path)
     plt.subplot(2, 2, 1)
     plt.title('Breath-first')
     plot_trajectory_2d(path, label="bfs")
-    plt.scatter(*zip(*queries.keys()), color="#23aaff", linewidths=0, alpha=0.6)
 
-    queries.clear()
-    path = heuristic_search(G, start, goal)
+    path = heuristic_search(G, (0, 0), (4, 4))
     print("heuristics", *path)
     plt.subplot(2, 2, 2)
     plt.title('Heuristic Search')
     plot_trajectory_2d(path, label="heuristics")
-    plt.scatter(*zip(*queries.keys()), color="#23aaff", linewidths=0, alpha=0.6)
 
-    G = nx.grid_graph(dim=[n, n])
+    G = nx.grid_graph(dim=[5, 5])
     G.add_edge((0, 0), (0, 1), weight=1)
     for e in G.edges(data=True):
         e[-1]['weight'] = 1
-
-    queries = patch_graph(G)
-
-    path = dijkstra(G, start, goal)
+    path = dijkstra(G, (0, 0), (4, 4))
     print("  dijkstra", *path)
+
     plt.subplot(2, 2, 3)
     plt.title('Dijkstra')
     plot_trajectory_2d(path, label="dijkstra")
-    plt.scatter(*zip(*queries.keys()), color="#23aaff", linewidths=0, alpha=0.6)
 
-    queries.clear()
-    path = a_star(G, start, goal)
+    path = a_star(G, (0, 0), (4, 4))
     print("        a*", *path)
+
     plt.subplot(2, 2, 4)
     plt.title('A*')
     plot_trajectory_2d(path, label="A*")
-    plt.scatter(*zip(*queries.keys()), color="#23aaff", linewidths=0, alpha=0.6)
 
     plt.legend(loc="upper left", bbox_to_anchor=(0.45, 0.8), framealpha=1, frameon=False, fontsize=12)
     from ml_logger import logger
 
     plt.tight_layout()
-    logger.savefig("../figures/search_range.png", dpi=300)
+    logger.savefig("../figures/comparison.png", dpi=300)
     plt.show()

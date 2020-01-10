@@ -1,66 +1,58 @@
-"""
-Comparison between various graph-search algorithms.
-
-reference: https://www.grayblobgames.com/pathfinding/a-star/introduction.html#dijkstra
-ref_2: https://medium.com/@nicholas.w.swift/easy-a-star-pathfinding-7e6689c7f7b2
-"""
-from collections import deque, defaultdict
 from functools import partial
 
 import networkx as nx
 import numpy as np
 import gym
-import ge_world
 from params_proto import proto_partial
 from params_proto.neo_proto import ParamsProto
 
 from graph_search import bfs, heuristic_search, dijkstra, a_star
+from streetlearn import StreetLearnDataset
 
 
 class Args(ParamsProto):
-    env_id = "CMazeDiscreteIdLess-v0"
+    env_id = "streetlearn_small"
     n_envs = 10
     n_rollout = 50
     n_timesteps = 1
-    neighbor_r = 0.036
+    neighbor_r = 2.4e-4
     neighbor_r_min = None
 
-    h_scale = 3
+    h_scale = 1.2
 
     # plotting
     visualize_graph = True
 
 
-def d(xy, xy_):
-    return np.linalg.norm(xy - xy_, ord=2)
-
-
-# @proto_partial(Args)
-def sample_trajs(seed, env_id=Args.env_id):
+def load_streetlearn(data_path="~/fair/streetlearn/processed-data/manhattan-large", pad=0.1):
+    from streetlearn import StreetLearnDataset
     import matplotlib.pyplot as plt
+    from os.path import expanduser
+    path = expanduser(data_path)
+    d = StreetLearnDataset(path)
+    d.select_bbox(-73.997, 40.726, 0.01, 0.008)
+    d.show_blowout("NYC-large", show=True)
 
-    np.random.seed(seed)
-    env = gym.make(env_id)
-    env.reset()
+    a = d.bbox[0] + d.bbox[2] * pad, d.bbox[1] + d.bbox[3] * pad
+    b = d.bbox[0] + d.bbox[2] * (1 - pad), d.bbox[1] + d.bbox[3] * (1 - pad)
+    (start, _), (goal, _) = d.locate_closest(*a), d.locate_closest(*b)
 
-    trajs = []
-    for i in range(Args.n_rollout):
-        obs = env.reset()
-        path = [obs['x']]
-        trajs.append(path)
-        for t in range(Args.n_timesteps - 1):
-            obs, reward, done, info = env.step(np.random.randint(low=0, high=7))
-            path.append(obs['x'])
-    trajs = np.array(trajs)
-    # fig = plt.figure(figsize=(3, 3))
-    # for path in trajs:
-    #     plt.plot(*zip(*path), color="gray")
-    # plt.gca().set_aspect('equal')
-    # plt.tight_layout()
-    # plt.show()
-    from ml_logger import logger
-    logger.print(f'seed {seed} has finished sampling.', color="green")
-    return trajs
+    fig = plt.figure(figsize=(6, 5))
+    plt.scatter(*d.lng_lat[start], marker="o", s=100, linewidth=3,
+                edgecolor="black", facecolor='none', label="start")
+    plt.scatter(*d.lng_lat[goal], marker="x", s=100, linewidth=3,
+                edgecolor="none", facecolor='red', label="end")
+    plt.legend(loc="upper left", bbox_to_anchor=(0.95, 0.7), framealpha=1,
+               frameon=False, fontsize=12)
+    d.show_blowout("NYC-large", fig=fig, box_color='gray', box_alpha=0.3,
+                   show=True, set_lim=True)
+
+    return d, start, goal
+
+    # 1. get data
+    # 2. build graph
+    # 3. get start and goal
+    # 4. make plans
 
 
 def plot_graph(graph):
@@ -72,27 +64,33 @@ def plot_graph(graph):
     # plt.show()
 
 
-def maze_graph(trajs):
-    all_nodes = np.concatenate(trajs)
-    graph = nx.Graph()
-    for i, xy in enumerate(all_nodes):
-        graph.add_node(i, pos=xy)
-    for i, a in graph.nodes.items():
-        for j, b in graph.nodes.items():
-            if d(a['pos'], b['pos']) < Args.neighbor_r \
-                    and (Args.neighbor_r_min is None
-                         or d(a['pos'], b['pos']) > Args.neighbor_r_min):
-                graph.add_edge(i, j, weight=d(a['pos'], b['pos']))
+def maze_graph(dataset: StreetLearnDataset):
+    from tqdm import tqdm
 
-    # if Args.visualize_graph:
-    #     plot_graph(graph)
+    all_nodes = dataset.lng_lat
+    graph = nx.Graph()
+    for node, xy in enumerate(tqdm(all_nodes, desc="build graph")):
+        graph.add_node(node, pos=xy)
+
+    data = []
+    for node, a in tqdm(graph.nodes.items(), desc="add edges"):
+        (ll,), (ds,), (ns,) = dataset.neighbor([node], r=Args.neighbor_r)
+        data.extend(ds)
+        for neighbor, d in zip(ns, ds):
+            graph.add_edge(node, neighbor, weight=d)
 
     return graph
+    # if Args.visualize_graph:
+    #     plot_graph(graph)
+    #     plt.gca().set_aspect(dataset.lat_correction)
+    #     plt.show()
 
 
-def heuristic(a, b, G, scale=1):
+# noinspection PyPep8Naming,PyShadowingNames
+def heuristic(a, b, G: nx.Graph, scale=1, lat_correction=1 / 0.74):
     a, b = G.nodes[a]['pos'], G.nodes[b]['pos']
-    return np.linalg.norm(np.array(a) - np.array(b), ord=2) * scale
+    magic = [1, lat_correction]
+    return np.linalg.norm((np.array(a) - np.array(b)) * magic, ord=1) * scale
 
 
 def plot_trajectory_2d(path, color='black', **kwargs):
@@ -104,14 +102,8 @@ def plot_trajectory_2d(path, color='black', **kwargs):
                   length_includes_head=True, head_starts_at_zero=True, fc=color, ec=color)
 
 
-def set_fig():
-    plt.xlim(-24, 24)
-    plt.ylim(-24, 24)
-
-
-def get_neighbor(G, pos):
-    ds = np.array([d(n['pos'], pos) for i, n in G.nodes.items()])
-    return np.argmin(ds)
+def set_fig(dataset: StreetLearnDataset):
+    plt.gca().set_aspect(dataset.lat_correction)
 
 
 def ind2pos(G, inds, scale=1):
@@ -135,20 +127,16 @@ def patch_graph(G):
 
 if __name__ == '__main__':
     from collections import defaultdict
-    from waterbear import DefaultBear, Bear
+    from waterbear import DefaultBear
     import matplotlib.pyplot as plt
-    from multiprocessing.pool import Pool
     from ml_logger import logger
 
-    p = Pool(10)
-    traj_batch = p.map(sample_trajs, range(Args.n_envs))
-
-    G = maze_graph(np.concatenate(traj_batch))
+    dataset, start, goal = load_streetlearn()
+    G = maze_graph(dataset)
     queries = patch_graph(G)
 
+    # goal -= 120 # 10 worked well
     cache = DefaultBear(dict)
-
-    start, goal = get_neighbor(G, (-0.16, 0.16)), get_neighbor(G, (-0.16, -0.16))
 
     fig = plt.figure(figsize=(4, 4), dpi=300)
 
@@ -162,7 +150,7 @@ if __name__ == '__main__':
     # plot_graph(G)
     plot_trajectory_2d(ind2pos(G, path, 100), label="bfs")
     plt.scatter(*zip(*ind2pos(G, queries.keys(), 100)), color="gray", s=3, alpha=0.6)
-    set_fig()
+    set_fig(dataset)
 
     queries.clear()
     path = heuristic_search(G, start, goal, partial(heuristic, G=G))
@@ -174,7 +162,7 @@ if __name__ == '__main__':
     # plot_graph(G)
     plot_trajectory_2d(ind2pos(G, path, 100), label="heuristics")
     plt.scatter(*zip(*ind2pos(G, queries.keys(), 100)), color="gray", s=3, alpha=0.6)
-    set_fig()
+    set_fig(dataset)
 
     queries.clear()
     path = dijkstra(G, start, goal)
@@ -186,7 +174,7 @@ if __name__ == '__main__':
     # plot_graph(G)
     plot_trajectory_2d(ind2pos(G, path, 100), label="dijkstra")
     plt.scatter(*zip(*ind2pos(G, queries.keys(), 100)), color="gray", s=3, alpha=0.6)
-    set_fig()
+    set_fig(dataset)
 
     queries.clear()
     path = a_star(G, start, goal, partial(heuristic, G=G, scale=Args.h_scale))
@@ -198,11 +186,11 @@ if __name__ == '__main__':
     # plot_graph(G)
     plot_trajectory_2d(ind2pos(G, path, 100), label="A*")
     plt.scatter(*zip(*ind2pos(G, queries.keys(), 100)), color="gray", s=3, alpha=0.6)
-    set_fig()
+    set_fig(dataset)
 
     # plt.legend(loc="upper left", bbox_to_anchor=(0.45, 0.8), framealpha=1, frameon=False, fontsize=12)
     plt.tight_layout()
-    logger.savefig("../figures/maze_plans.png", dpi=300)
+    logger.savefig("../figures/streetlearn_plans.png", dpi=300)
     plt.show()
     plt.close()
 
@@ -217,7 +205,7 @@ if __name__ == '__main__':
     plt.gca().spines['top'].set_visible(False)
     plt.gca().spines['right'].set_visible(False)
     plt.tight_layout()
-    logger.savefig("../figures/maze_cost.png", dpi=300)
+    logger.savefig("../figures/streetlearn_cost.png", dpi=300)
     plt.ylabel('# of distance lookup')
     plt.show()
 
@@ -228,7 +216,7 @@ if __name__ == '__main__':
     plt.gca().spines['top'].set_visible(False)
     plt.gca().spines['right'].set_visible(False)
     plt.tight_layout()
-    logger.savefig("../figures/maze_length.png", dpi=300)
+    logger.savefig("../figures/streetlearn_length.png", dpi=300)
     plt.ylabel('# of Steps')
     plt.show()
 
