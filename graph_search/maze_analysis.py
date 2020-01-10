@@ -21,7 +21,7 @@ class Args(ParamsProto):
     n_rollout = 50
     n_timesteps = 1
     neighbor_r = 0.036
-    neighbor_r_min = 0.02
+    neighbor_r_min = None
 
     h_scale = 3
 
@@ -77,8 +77,9 @@ def maze_graph(trajs):
         graph.add_node(i, pos=xy)
     for i, a in graph.nodes.items():
         for j, b in graph.nodes.items():
-            if d(a['pos'], b['pos']) < Args.neighbor_r and \
-                    d(a['pos'], b['pos']) > Args.neighbor_r_min:
+            if d(a['pos'], b['pos']) < Args.neighbor_r \
+                    and (Args.neighbor_r_min is None
+                         or d(a['pos'], b['pos']) > Args.neighbor_r_min):
                 graph.add_edge(i, j, weight=d(a['pos'], b['pos']))
 
     # if Args.visualize_graph:
