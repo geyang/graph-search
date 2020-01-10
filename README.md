@@ -21,7 +21,7 @@ This is reflected in the implementation in [./graph_search](./graph_search/__ini
         src="figures/comparison.png"/>
 </p>
 
-## Prioritized Search
+## Prioritized Search and Heuristics
 
 A planning heuristic helps reduce the planning expenditure. The left column are breath-first-search and dijkstra, both do not use a planning heuristic. On the right are heuristic search and A*.
 
@@ -32,6 +32,33 @@ The <span color="#23aaff">blue</span> colored dots represent the nodes the searc
         alt="bfs,heuristic,dijkstra and a* algorithms" 
         src="figures/search_range.png"/>
 </p>
+
+To visualize which node has been touched, we use the code in [analysis.py](./graph_search/analysis.py). Because the heuristics is L2 whereas the planning distance is L1, we have to scale it up to get this result.
+
+   method   | priority 
+:---------: | ----------
+ dijkstra's | `D(next)`, the length to the node
+ A*         | `D(next) + H(next, goal)`.
+
+## Maze Environment Planning Result
+
+Now we can compare the planning cost between these algorithms on the maze environment. We use a simple Euclidean distance as our heuristics (axis ticks in cm).
+
+<p align="center">
+   <img width="300px"
+        alt="bfs,heuristic,dijkstra and a* algorithms" 
+        src="figures/maze_plans.png"/>
+</p>
+
+We can compare the number of distance look-ups that are required among these methods:
+
+<p align="center">
+   <img width="300px"
+        alt="bfs,heuristic,dijkstra and a* algorithms" 
+        src="figures/maze_cost.png"/>
+</p>
+
+With a learned reacheability heuristics, `plan2vec` should do better than `A*` with a Euclidean heuristic.
 
 ## Graph Interface
 
