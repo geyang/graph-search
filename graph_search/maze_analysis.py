@@ -23,6 +23,8 @@ class Args(ParamsProto):
     neighbor_r = 0.036
     neighbor_r_min = 0.02
 
+    h_scale = 3
+
     # plotting
     visualize_graph = True
 
@@ -241,7 +243,7 @@ def patch_graph(G):
 
 if __name__ == '__main__':
     from collections import defaultdict
-    from matplotlib import rcParams
+    from waterbear import DefaultBear, Bear
     import matplotlib.pyplot as plt
     from multiprocessing.pool import Pool
     from ml_logger import logger
@@ -250,15 +252,17 @@ if __name__ == '__main__':
     traj_batch = p.map(sample_trajs, range(Args.n_envs))
 
     G = maze_graph(np.concatenate(traj_batch))
-
     queries = patch_graph(G)
+
+    cache = DefaultBear(dict)
 
     start, goal = get_neighbor(G, (-0.16, 0.16)), get_neighbor(G, (-0.16, -0.16))
 
     fig = plt.figure(figsize=(4, 4), dpi=300)
 
     path = bfs(G, start, goal)
-    logger.log(bfs=len(queries.keys()))
+    cache.cost['bfs'] = len(queries.keys())
+    cache.len['bfs'] = len(path)
     print(f"       bfs len: {len(path)}", *path)
     print(f"# of queries {len(queries.keys())}")
     plt.subplot(2, 2, 1)
@@ -270,7 +274,8 @@ if __name__ == '__main__':
 
     queries.clear()
     path = heuristic_search(G, start, goal, partial(heuristic, G=G))
-    logger.log(heuristic=len(queries.keys()))
+    cache.cost.update(heuristic=len(queries.keys()))
+    cache.len['heuristic'] = len(path)
     print(f"heuristics len: {len(path)}", *path)
     plt.subplot(2, 2, 2)
     plt.title('Heuristic')
@@ -281,7 +286,8 @@ if __name__ == '__main__':
 
     queries.clear()
     path = dijkstra(G, start, goal)
-    logger.log_key_value("Dijkstra's", len(queries.keys()))
+    cache.cost["Dijkstra's"] = len(queries.keys())
+    cache.len["Dijstra's"] = len(path)
     print(f"  dijkstra len: {len(path)}", *path)
     plt.subplot(2, 2, 3)
     plt.title(f"Dijkstra's")
@@ -291,8 +297,9 @@ if __name__ == '__main__':
     set_fig()
 
     queries.clear()
-    path = a_star(G, start, goal, partial(heuristic, G=G, scale=3))
-    logger.log_key_value("A*", len(queries.keys()))
+    path = a_star(G, start, goal, partial(heuristic, G=G, scale=Args.h_scale))
+    cache.cost["A*"] = len(queries.keys())
+    cache.len["A*"] = len(path)
     print(f"        a* len: {len(path)}", *path)
     plt.subplot(2, 2, 4)
     plt.title('A*')
@@ -307,22 +314,30 @@ if __name__ == '__main__':
     plt.show()
     plt.close()
 
-    logger.key_value_cache.data.pop('__timestamp')
-    data = logger.key_value_cache.data
-
     # colors = ['#49b8ff', '#ff7575', '#66c56c', '#f4b247']
+    # for i, (k, v) in enumerate(cache.items()):
+    #     plt.bar(k, v, color=colors[i])
 
     fig = plt.figure(figsize=(3.8, 3), dpi=300)
     plt.title('Planning Cost')
-    # for i, (k, v) in enumerate(data.items()):
-    #     plt.bar(k, v, color=colors[i])
-    plt.bar(data.keys(), data.values(), color="gray", width=0.8)
-    plt.ylim(0, max(data.values()) * 1.2)
+    plt.bar(cache.cost.keys(), cache.cost.values(), color="gray", width=0.8)
+    plt.ylim(0, max(cache.cost.values()) * 1.2)
     plt.gca().spines['top'].set_visible(False)
     plt.gca().spines['right'].set_visible(False)
     plt.tight_layout()
     logger.savefig("../figures/maze_cost.png", dpi=300)
     plt.ylabel('# of distance lookup')
+    plt.show()
+
+    fig = plt.figure(figsize=(3.8, 3), dpi=300)
+    plt.title('Plan Length')
+    plt.bar(cache.len.keys(), cache.len.values(), color="gray", width=0.8)
+    plt.ylim(0, max(cache.len.values()) * 1.2)
+    plt.gca().spines['top'].set_visible(False)
+    plt.gca().spines['right'].set_visible(False)
+    plt.tight_layout()
+    logger.savefig("../figures/maze_length.png", dpi=300)
+    plt.ylabel('# of Steps')
     plt.show()
 
     logger.print('done', color="green")

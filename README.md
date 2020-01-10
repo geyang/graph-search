@@ -53,9 +53,12 @@ Now we can compare the planning cost between these algorithms on the maze enviro
 We can compare the number of distance look-ups that are required among these methods:
 
 <p align="center">
-   <img width="300px"
-        alt="bfs,heuristic,dijkstra and a* algorithms" 
-        src="figures/maze_cost.png"/>
+       <img width="200px" float="left"
+            alt="planning cost of bfs,heuristic,dijkstra and a* algorithms" 
+            src="figures/maze_cost.png"/>
+       <img width="200px" float="left"
+            alt="trajectory length of bfs,heuristic,dijkstra and a* algorithms" 
+            src="figures/maze_length.png"/>
 </p>
 
 With a learned reacheability heuristics, `plan2vec` should do better than `A*` with a Euclidean heuristic.
