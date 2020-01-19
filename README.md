@@ -2,6 +2,10 @@
 
 A small collection of graph-search algorithms and analysis.
 
+These code are intended to be self-contained single-script program.
+They will get merged and productionized into a single planner core,
+for the plan2vec paper.
+
 ## Constructing and Visualizing the State Graph
 
 use a grid-graph.

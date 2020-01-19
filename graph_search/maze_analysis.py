@@ -10,11 +10,10 @@ from functools import partial
 import networkx as nx
 import numpy as np
 import gym
-import ge_world
 from params_proto import proto_partial
 from params_proto.neo_proto import ParamsProto
 
-from graph_search import bfs, heuristic_search, dijkstra, a_star
+from graph_search import methods, short_names
 
 
 class Args(ParamsProto):
@@ -27,9 +26,6 @@ class Args(ParamsProto):
 
     h_scale = 3
 
-    # plotting
-    visualize_graph = True
-
 
 def d(xy, xy_):
     return np.linalg.norm(xy - xy_, ord=2)
@@ -37,7 +33,8 @@ def d(xy, xy_):
 
 # @proto_partial(Args)
 def sample_trajs(seed, env_id=Args.env_id):
-    import matplotlib.pyplot as plt
+    from ge_world import IS_PATCHED
+    assert IS_PATCHED, "required for these envs."
 
     np.random.seed(seed)
     env = gym.make(env_id)
@@ -52,15 +49,16 @@ def sample_trajs(seed, env_id=Args.env_id):
             obs, reward, done, info = env.step(np.random.randint(low=0, high=7))
             path.append(obs['x'])
     trajs = np.array(trajs)
+    from ml_logger import logger
+    logger.print(f'seed {seed} has finished sampling.', color="green")
+    return trajs
+
     # fig = plt.figure(figsize=(3, 3))
     # for path in trajs:
     #     plt.plot(*zip(*path), color="gray")
     # plt.gca().set_aspect('equal')
     # plt.tight_layout()
     # plt.show()
-    from ml_logger import logger
-    logger.print(f'seed {seed} has finished sampling.', color="green")
-    return trajs
 
 
 def plot_graph(graph):
@@ -135,7 +133,7 @@ def patch_graph(G):
 
 if __name__ == '__main__':
     from collections import defaultdict
-    from waterbear import DefaultBear, Bear
+    from waterbear import DefaultBear
     import matplotlib.pyplot as plt
     from multiprocessing.pool import Pool
     from ml_logger import logger
@@ -152,53 +150,22 @@ if __name__ == '__main__':
 
     fig = plt.figure(figsize=(4, 4), dpi=300)
 
-    path = bfs(G, start, goal)
-    cache.cost['bfs'] = len(queries.keys())
-    cache.len['bfs'] = len(path)
-    print(f"       bfs len: {len(path)}", *path)
-    print(f"# of queries {len(queries.keys())}")
-    plt.subplot(2, 2, 1)
-    plt.title(f'Breath-first')
-    # plot_graph(G)
-    plot_trajectory_2d(ind2pos(G, path, 100), label="bfs")
-    plt.scatter(*zip(*ind2pos(G, queries.keys(), 100)), color="gray", s=3, alpha=0.6)
-    set_fig()
+    for i, (key, search) in enumerate(methods.items()):
+        queries.clear()
+        name = search.__name__
+        title, *_ = search.__doc__.split('\n')
+        short_name = short_names[key]
 
-    queries.clear()
-    path = heuristic_search(G, start, goal, partial(heuristic, G=G))
-    cache.cost.update(heuristic=len(queries.keys()))
-    cache.len['heuristic'] = len(path)
-    print(f"heuristics len: {len(path)}", *path)
-    plt.subplot(2, 2, 2)
-    plt.title('Heuristic')
-    # plot_graph(G)
-    plot_trajectory_2d(ind2pos(G, path, 100), label="heuristics")
-    plt.scatter(*zip(*ind2pos(G, queries.keys(), 100)), color="gray", s=3, alpha=0.6)
-    set_fig()
-
-    queries.clear()
-    path = dijkstra(G, start, goal)
-    cache.cost["Dijkstra's"] = len(queries.keys())
-    cache.len["Dijstra's"] = len(path)
-    print(f"  dijkstra len: {len(path)}", *path)
-    plt.subplot(2, 2, 3)
-    plt.title(f"Dijkstra's")
-    # plot_graph(G)
-    plot_trajectory_2d(ind2pos(G, path, 100), label="dijkstra")
-    plt.scatter(*zip(*ind2pos(G, queries.keys(), 100)), color="gray", s=3, alpha=0.6)
-    set_fig()
-
-    queries.clear()
-    path = a_star(G, start, goal, partial(heuristic, G=G, scale=Args.h_scale))
-    cache.cost["A*"] = len(queries.keys())
-    cache.len["A*"] = len(path)
-    print(f"        a* len: {len(path)}", *path)
-    plt.subplot(2, 2, 4)
-    plt.title('A*')
-    # plot_graph(G)
-    plot_trajectory_2d(ind2pos(G, path, 100), label="A*")
-    plt.scatter(*zip(*ind2pos(G, queries.keys(), 100)), color="gray", s=3, alpha=0.6)
-    set_fig()
+        path, ds = search(G, start, goal, partial(heuristic, G=G, scale=Args.h_scale))
+        cache.cost[short_name] = len(queries.keys())
+        cache.len[short_name] = sum(ds)
+        print(f"{key:>10} len: {len(path)}", f"cost: {len(queries.keys())}")
+        plt.subplot(2, 2, i + 1)
+        plt.title(title)
+        # plot_graph(G)
+        plot_trajectory_2d(ind2pos(G, path, 100), label=short_name)
+        plt.scatter(*zip(*ind2pos(G, queries.keys(), 100)), color="gray", s=3, alpha=0.6)
+        set_fig()
 
     # plt.legend(loc="upper left", bbox_to_anchor=(0.45, 0.8), framealpha=1, frameon=False, fontsize=12)
     plt.tight_layout()
@@ -207,9 +174,6 @@ if __name__ == '__main__':
     plt.close()
 
     # colors = ['#49b8ff', '#ff7575', '#66c56c', '#f4b247']
-    # for i, (k, v) in enumerate(cache.items()):
-    #     plt.bar(k, v, color=colors[i])
-
     fig = plt.figure(figsize=(3.8, 3), dpi=300)
     plt.title('Planning Cost')
     plt.bar(cache.cost.keys(), cache.cost.values(), color="gray", width=0.8)
@@ -229,7 +193,7 @@ if __name__ == '__main__':
     plt.gca().spines['right'].set_visible(False)
     plt.tight_layout()
     logger.savefig("../figures/maze_length.png", dpi=300)
-    plt.ylabel('# of Steps')
+    plt.ylabel('Path Length')
     plt.show()
 
     logger.print('done', color="green")

@@ -6,15 +6,12 @@ import gym
 from params_proto import proto_partial
 from params_proto.neo_proto import ParamsProto
 
-from graph_search import bfs, heuristic_search, dijkstra, a_star
+from graph_search import methods, short_names
 from streetlearn import StreetLearnDataset
 
 
 class Args(ParamsProto):
     env_id = "streetlearn_small"
-    n_envs = 10
-    n_rollout = 50
-    n_timesteps = 1
     neighbor_r = 2.4e-4
     neighbor_r_min = None
 
@@ -44,7 +41,7 @@ def load_streetlearn(data_path="~/fair/streetlearn/processed-data/manhattan-larg
                 edgecolor="none", facecolor='red', label="end")
     plt.legend(loc="upper left", bbox_to_anchor=(0.95, 0.7), framealpha=1,
                frameon=False, fontsize=12)
-    d.show_blowout("NYC-large", fig=fig, box_color='gray', box_alpha=0.3,
+    d.show_blowout("NYC-large", fig=fig, box_color='gray', box_alpha=0.1,
                    show=True, set_lim=True)
 
     return d, start, goal
@@ -72,10 +69,8 @@ def maze_graph(dataset: StreetLearnDataset):
     for node, xy in enumerate(tqdm(all_nodes, desc="build graph")):
         graph.add_node(node, pos=xy)
 
-    data = []
     for node, a in tqdm(graph.nodes.items(), desc="add edges"):
         (ll,), (ds,), (ns,) = dataset.neighbor([node], r=Args.neighbor_r)
-        data.extend(ds)
         for neighbor, d in zip(ns, ds):
             graph.add_edge(node, neighbor, weight=d)
 
@@ -140,17 +135,22 @@ if __name__ == '__main__':
 
     fig = plt.figure(figsize=(4, 4), dpi=300)
 
-    path = bfs(G, start, goal)
-    cache.cost['bfs'] = len(queries.keys())
-    cache.len['bfs'] = len(path)
-    print(f"       bfs len: {len(path)}", *path)
-    print(f"# of queries {len(queries.keys())}")
-    plt.subplot(2, 2, 1)
-    plt.title(f'Breath-first')
-    # plot_graph(G)
-    plot_trajectory_2d(ind2pos(G, path, 100), label="bfs")
-    plt.scatter(*zip(*ind2pos(G, queries.keys(), 100)), color="gray", s=3, alpha=0.6)
-    set_fig(dataset)
+    for i, (key, search) in enumerate(methods.items()):
+        queries.clear()
+        name = search.__name__
+        title, *_ = search.__doc__.split('\n')
+        short_name = short_names[key]
+
+        path, ds = search(G, start, goal, partial(heuristic, G=G, scale=1.2))
+        cache.cost[short_name] = len(queries.keys())
+        cache.len[short_name] = len(ds)
+        print(f"{key:>10} len: {len(path)}", f"cost: {len(queries.keys())}")
+        plt.subplot(2, 2, i + 1)
+        plt.title(title)
+        # plot_graph(G)
+        plot_trajectory_2d(ind2pos(G, path, 100), label=short_name)
+        plt.scatter(*zip(*ind2pos(G, queries.keys(), 100)), color="gray", s=3, alpha=0.1)
+        set_fig(dataset)
 
     queries.clear()
     path = heuristic_search(G, start, goal, partial(heuristic, G=G))
@@ -217,7 +217,7 @@ if __name__ == '__main__':
     plt.gca().spines['right'].set_visible(False)
     plt.tight_layout()
     logger.savefig("../figures/streetlearn_length.png", dpi=300)
-    plt.ylabel('# of Steps')
+    plt.ylabel('Path Length')
     plt.show()
 
     logger.print('done', color="green")
