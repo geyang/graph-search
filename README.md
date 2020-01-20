@@ -43,7 +43,7 @@ To visualize which node has been touched, we use the code in [analysis.py](./gra
 :---------: | ----------
  dijkstra's | `D(next)`, the length to the node
  A*         | `D(next) + H(next, goal) * scale`.
- 
+
 > Note: in order for A* to find the shortest path, the heuristics need to be "admissible". Otherwise there is no guarantee. Here our scaling factor breaks this assumption.
 
 ## Maze Environment Planning Result
@@ -98,6 +98,13 @@ We can compare the number of distance look-ups that are required among these met
 With a learned reacheability heuristics, `plan2vec` should do better than `A*` with a Euclidean heuristic.
 
 (The planning lenght is not computed using the weights)
+
+
+
+## TODOs
+
+- [ ] 
+- [ ] 
 
 
 ## Graph Interface

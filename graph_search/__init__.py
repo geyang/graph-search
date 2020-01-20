@@ -10,18 +10,21 @@ import numpy as np
 
 
 def backtrack(link, start, goal):
-    node = goal
-    yield node
-    i = 0
-    while node in link:
-        node = link[node]
-        yield node
-        if node == start:
-            break
+    curr = goal
+    inds, ds = [], []
+    while curr in link:
+        prev, d = link[curr]
+        inds.append(curr)
+        ds.append(d)
+        if prev == start:
+            inds.append(prev)
+            return inds[::-1], ds[::-1]
+        curr = prev
 
 
-def bfs(graph: nx.Graph, start, goal=None):
-    """breath-first search
+def bfs(graph: nx.Graph, start, goal=None, *_):
+    """Breath-first Search
+
     :param graph: a graph object
     :param start: the starting node
     :param goal: optional, when not supplied generates the entire path tree.
@@ -36,10 +39,12 @@ def bfs(graph: nx.Graph, start, goal=None):
         for n in graph.neighbors(current):
             if n in visited:
                 continue
+            # only used to compute path length
+            edge_len = graph.get_edge_data(current, n).get('weight', 1)
             frontier.append(n)
-            visited[n] = current
+            visited[n] = current, edge_len
             if n == goal:
-                return list(backtrack(visited, start, goal))[::-1]
+                return backtrack(visited, start, goal)
 
 
 from heapq import heapify, heappush, heappop
@@ -60,23 +65,42 @@ class PriorityQue:
 
 
 def heuristic_search(graph: nx.Graph, start, goal, heuristic):
+    """Heuristic Search
+
+    :param graph:
+    :param start:
+    :param goal:
+    :param heuristic:
+    :return:
+    """
     frontier = PriorityQue()
     visited = dict()
 
     frontier.push(0, start)
     while len(frontier):
         _, current = frontier.pop()
-        for n in graph.neighbors(current):
+        ns = [*graph.neighbors(current)]
+        to_goals = heuristic(ns, [goal])
+        for ind, n in enumerate(ns):
             if n in visited:
                 continue
-            to_goal = heuristic(n, goal)
+            # only used to compute path length
+            edge_len = graph.get_edge_data(current, n).get('weight', 1)
+            to_goal = to_goals[ind]
             frontier.push(to_goal, n)
-            visited[n] = current
+            visited[n] = current, edge_len
             if n == goal:
-                return list(backtrack(visited, start, goal))[::-1]
+                return backtrack(visited, start, goal)
 
 
-def dijkstra(graph: nx.Graph, start, goal):
+def dijkstra(graph: nx.Graph, start, goal, *_):
+    """Dijkstra's
+
+    :param graph:
+    :param start:
+    :param goal:
+    :return:
+    """
     frontier = PriorityQue()
     visited = dict()
 
@@ -86,29 +110,39 @@ def dijkstra(graph: nx.Graph, start, goal):
         for n in graph.neighbors(current):
             if n in visited:
                 continue
-            edge_len = graph.get_edge_data(current, n)['weight']
+            edge_len = graph.get_edge_data(current, n).get('weight', 1)
             frontier.push(sofar + edge_len, n)
-            visited[n] = current
+            visited[n] = current, edge_len
             if n == goal:
-                return list(backtrack(visited, start, goal))[::-1]
+                return backtrack(visited, start, goal)
 
 
 def a_star(graph: nx.Graph, start, goal, heuristic):
+    """A*
+
+    :param graph:
+    :param start:
+    :param goal:
+    :param heuristic:
+    :return:
+    """
     frontier = PriorityQue()
     visited = dict()
 
     frontier.push(0, 0, start)
     while len(frontier):
         _, sofar, current = frontier.pop()
-        for n in graph.neighbors(current):
+        ns = [*graph.neighbors(current)]
+        to_goals = heuristic(ns, [goal])
+        for ind, n in enumerate(ns):
             if n in visited:
                 continue
-            edge_len = graph.get_edge_data(current, n)['weight']
-            to_goal = heuristic(n, goal)
+            edge_len = graph.get_edge_data(current, n).get('weight', 1)
+            to_goal = to_goals[ind]
             frontier.push(sofar + edge_len + to_goal, sofar + edge_len, n)
-            visited[n] = current
+            visited[n] = current, edge_len
             if n == goal:
-                return list(backtrack(visited, start, goal))[::-1]
+                return backtrack(visited, start, goal)
 
 
 def plot_trajectory_2d(path, color='black', **kwargs):
@@ -136,13 +170,20 @@ def patch_graph(G):
     return queries
 
 
+# export all of the methods here.
+methods = {"bfs": bfs, "heuristic": heuristic_search,
+           "dijkstra": dijkstra, "a_star": a_star}
+
+short_names = {"bfs": "bfs", "heuristic": "heuristic",
+               "dijkstra": "Dijkstra's", "a_star": "A*"}
+
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
     from collections import defaultdict
 
 
     def heuristic(a, b):
-        return np.linalg.norm(np.array(a) - np.array(b), ord=2) * 5
+        return np.linalg.norm(np.array(a) - np.array(b), ord=2, axis=-1) * 5
 
 
     n, start, goal = 7, (0, 0), (6, 6)
@@ -152,7 +193,7 @@ if __name__ == '__main__':
 
     fig = plt.figure(figsize=(4, 4))
 
-    path = bfs(G, start, goal)
+    path, ds = bfs(G, start, goal)
     print("       bfs", *path)
     plt.subplot(2, 2, 1)
     plt.title('Breath-first')
@@ -160,7 +201,7 @@ if __name__ == '__main__':
     plt.scatter(*zip(*queries.keys()), color="#23aaff", linewidths=0, alpha=0.6)
 
     queries.clear()
-    path = heuristic_search(G, start, goal, heuristic)
+    path, ds = heuristic_search(G, start, goal, heuristic)
     print("heuristics", *path)
     plt.subplot(2, 2, 2)
     plt.title('Heuristic Search')
@@ -174,7 +215,7 @@ if __name__ == '__main__':
 
     queries = patch_graph(G)
 
-    path = dijkstra(G, start, goal)
+    path, ds = dijkstra(G, start, goal)
     print("  dijkstra", *path)
     plt.subplot(2, 2, 3)
     plt.title('Dijkstra')
@@ -182,7 +223,7 @@ if __name__ == '__main__':
     plt.scatter(*zip(*queries.keys()), color="#23aaff", linewidths=0, alpha=0.6)
 
     queries.clear()
-    path = a_star(G, start, goal, heuristic)
+    path, ds = a_star(G, start, goal, heuristic)
     print("        a*", *path)
     plt.subplot(2, 2, 4)
     plt.title('A*')
