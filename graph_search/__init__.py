@@ -20,6 +20,7 @@ def backtrack(link, start, goal):
             inds.append(prev)
             return inds[::-1], ds[::-1]
         curr = prev
+    return None, None
 
 
 def bfs(graph: nx.Graph, start, goal=None, *_):
@@ -40,7 +41,7 @@ def bfs(graph: nx.Graph, start, goal=None, *_):
             if n in visited:
                 continue
             # only used to compute path length
-            edge_len = graph.get_edge_data(current, n).get('weight', 1)
+            edge_len = graph.edges[current, n].get('weight', 1)
             frontier.append(n)
             visited[n] = current, edge_len
             if n == goal:
@@ -85,7 +86,7 @@ def heuristic_search(graph: nx.Graph, start, goal, heuristic):
             if n in visited:
                 continue
             # only used to compute path length
-            edge_len = graph.get_edge_data(current, n).get('weight', 1)
+            edge_len = graph.edges[current, n].get('weight', 1)
             to_goal = to_goals[ind]
             frontier.push(to_goal, n)
             visited[n] = current, edge_len
@@ -110,7 +111,7 @@ def dijkstra(graph: nx.Graph, start, goal, *_):
         for n in graph.neighbors(current):
             if n in visited:
                 continue
-            edge_len = graph.get_edge_data(current, n).get('weight', 1)
+            edge_len = graph.edges[current, n].get('weight', 1)
             frontier.push(sofar + edge_len, n)
             visited[n] = current, edge_len
             if n == goal:
@@ -137,7 +138,7 @@ def a_star(graph: nx.Graph, start, goal, heuristic):
         for ind, n in enumerate(ns):
             if n in visited:
                 continue
-            edge_len = graph.get_edge_data(current, n).get('weight', 1)
+            edge_len = graph.edges[current, n].get('weight', 1)
             to_goal = to_goals[ind]
             frontier.push(sofar + edge_len + to_goal, sofar + edge_len, n)
             visited[n] = current, edge_len

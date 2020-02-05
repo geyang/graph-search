@@ -89,8 +89,9 @@ def maze_graph(trajs):
 
 
 def heuristic(a, b, G, scale=1):
-    a, b = G.nodes[a]['pos'], G.nodes[b]['pos']
-    return np.linalg.norm(np.array(a) - np.array(b), ord=2) * scale
+    a = [G.nodes[n]['pos'] for n in a]
+    b = [G.nodes[n]['pos'] for n in b]
+    return np.linalg.norm((np.array(a) - np.array(b)), ord=1, axis=-1) * scale
 
 
 def plot_trajectory_2d(path, color='black', **kwargs):
@@ -103,8 +104,11 @@ def plot_trajectory_2d(path, color='black', **kwargs):
 
 
 def set_fig():
+    plt.gca().set_yticklabels([])
+    plt.gca().set_xticklabels([])
     plt.xlim(-24, 24)
     plt.ylim(-24, 24)
+    plt.gca().set_aspect('equal')
 
 
 def get_neighbor(G, pos):
@@ -161,7 +165,7 @@ if __name__ == '__main__':
         cache.len[short_name] = sum(ds)
         print(f"{key:>10} len: {len(path)}", f"cost: {len(queries.keys())}")
         plt.subplot(2, 2, i + 1)
-        plt.title(title)
+        plt.title(title, pad=10)
         # plot_graph(G)
         plot_trajectory_2d(ind2pos(G, path, 100), label=short_name)
         plt.scatter(*zip(*ind2pos(G, queries.keys(), 100)), color="gray", s=3, alpha=0.6)
