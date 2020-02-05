@@ -46,6 +46,7 @@ def bfs(graph: nx.Graph, start, goal=None, *_):
             visited[n] = current, edge_len
             if n == goal:
                 return backtrack(visited, start, goal)
+    return None, None
 
 
 from heapq import heapify, heappush, heappop
@@ -92,6 +93,7 @@ def heuristic_search(graph: nx.Graph, start, goal, heuristic):
             visited[n] = current, edge_len
             if n == goal:
                 return backtrack(visited, start, goal)
+    return None, None
 
 
 def dijkstra(graph: nx.Graph, start, goal, *_):
@@ -116,6 +118,7 @@ def dijkstra(graph: nx.Graph, start, goal, *_):
             visited[n] = current, edge_len
             if n == goal:
                 return backtrack(visited, start, goal)
+    return None, None
 
 
 def a_star(graph: nx.Graph, start, goal, heuristic):
@@ -144,6 +147,7 @@ def a_star(graph: nx.Graph, start, goal, heuristic):
             visited[n] = current, edge_len
             if n == goal:
                 return backtrack(visited, start, goal)
+    return None, None
 
 
 def plot_trajectory_2d(path, color='black', **kwargs):
