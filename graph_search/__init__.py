@@ -32,20 +32,20 @@ def bfs(graph: nx.Graph, start, goal=None, *_):
     :return:
     """
     frontier = deque()
-    visited = dict()
+    tree = dict()
 
     frontier.append(start)
     while len(frontier):
         current = frontier.popleft()
         for n in graph.neighbors(current):
-            if n in visited:
+            if n in tree:
                 continue
             # only used to compute path length
             edge_len = graph.edges[current, n].get('weight', 1)
+            tree[n] = current, edge_len
+            if goal == n:
+                return backtrack(tree, start, goal)
             frontier.append(n)
-            visited[n] = current, edge_len
-            if n == goal:
-                return backtrack(visited, start, goal)
     return None, None
 
 
@@ -89,13 +89,25 @@ def heuristic_search(graph: nx.Graph, start, goal, heuristic):
             # only used to compute path length
             edge_len = graph.edges[current, n].get('weight', 1)
             to_goal = to_goals[ind]
-            frontier.push(to_goal, n)
             visited[n] = current, edge_len
-            if n == goal:
+            if goal == n:
                 return backtrack(visited, start, goal)
+            frontier.push(to_goal, n)
     return None, None
 
 
+# note: the termination condition in dikjstra's can be a function.
+#       However, I decided against doing this, because adding the
+#       goal node to the graph and only use the identity for termination
+#       has the benefit that we can use the same neighborhood
+#       relationship to define the last leg, as opposed to using
+#       1-step lookahead, which overlaps with the neighbor function.
+#
+# note-2: nice hack: we can overload the __eq__ meta method of the goal
+#         object, to return True if the goal n falls within a set of nodes
+#         on the graph. In this case we just return a proxy object as the goal.
+#         To this end, we revert the equal sign.
+#         - Ge :)
 def dijkstra(graph: nx.Graph, start, goal, *_):
     """Dijkstra's
 
@@ -114,10 +126,10 @@ def dijkstra(graph: nx.Graph, start, goal, *_):
             if n in visited:
                 continue
             edge_len = graph.edges[current, n].get('weight', 1)
-            frontier.push(sofar + edge_len, n)
             visited[n] = current, edge_len
-            if n == goal:
+            if goal == n:
                 return backtrack(visited, start, goal)
+            frontier.push(sofar + edge_len, n)
     return None, None
 
 
@@ -143,10 +155,10 @@ def a_star(graph: nx.Graph, start, goal, heuristic):
                 continue
             edge_len = graph.edges[current, n].get('weight', 1)
             to_goal = to_goals[ind]
-            frontier.push(sofar + edge_len + to_goal, sofar + edge_len, n)
             visited[n] = current, edge_len
-            if n == goal:
+            if goal == n:
                 return backtrack(visited, start, goal)
+            frontier.push(sofar + edge_len + to_goal, sofar + edge_len, n)
     return None, None
 
 
