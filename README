@@ -1,0 +1,151 @@
+Graph Search Algorithms
+=======================
+
+A small collection of graph-search algorithms and analysis.
+
+These code-block are intended to be self-contained single-script program. They
+will get merged and productionized into a single planner core, for the
+plan2vec paper.
+
+Constructing and Visualizing the State Graph
+--------------------------------------------
+
+use a grid-graph.
+
+.. _graph-search-algorithms-1:
+
+Graph Search Algorithms
+-----------------------
+
+-  *breath first*: use path_length and push order as priority.
+-  *heuristic*: use D(next, goal) as priority.
+-  *dijkstra*: use path_length as priority.
+-  \*a**: use d(path) + D(next, goal) as priority.
+
+This is reflected in the implementation in
+`https://github.com/geyang/graph_search/blob/master/graph_search <https://github.com/geyang/graph_search/blob/master/graph_search/__init__.py>`__.
+
+.. raw:: html
+
+   <p align="center">
+
+.. raw:: html
+
+   </p>
+
+Prioritized Search and Heuristics
+---------------------------------
+
+A planning heuristic helps reduce the planning expenditure. The left
+column are breath-first-search and dijkstra, both do not use a planning
+heuristic. On the right are heuristic search and A*.
+
+The blue colored dots represent the nodes the search algorithm has
+“touched”. Heuristics help reduce the cost during planning.
+
+.. raw:: html
+
+   <p align="center">
+
+.. raw:: html
+
+   </p>
+
+To visualize which node has been touched, we use the code-block in
+`analysis.py <https://github.com/geyang/graph_search/blob/master/graph_search/analysis.py>`__. Because the heuristics is
+L2 whereas the planning distance is L1, we have to scale it up to get
+this result.
+
++------------+--------------------------------------+
+| method     | priority                             |
++============+======================================+
+| dijkstra’s | ``D(next)``, the length to the node  |
++------------+--------------------------------------+
+| A\*        | ``D(next) + H(next, goal) * scale``. |
++------------+--------------------------------------+
+
+..
+
+   Note: in order for A\* to find the shortest path, the heuristics need
+   to be “admissible”. Otherwise there is no guarantee. Here our scaling
+   factor breaks this assumption.
+
+Maze Environment Planning Result
+--------------------------------
+
+Now we can compare the planning cost between these algorithms on the
+maze environment. We use a simple Euclidean distance as our heuristics
+(axis ticks in cm).
+
+.. raw:: html
+
+   <p align="center">
+
+.. raw:: html
+
+   </p>
+
+We can compare the number of distance look-ups that are required among
+these methods:
+
+.. raw:: html
+
+   <p align="center">
+
+.. raw:: html
+
+   </p>
+
+With a learned reacheability heuristics, ``plan2vec`` should do better
+than ``A*`` with a Euclidean heuristic.
+
+(The planning lenght is not computed using the weights)
+
+StreetLearn Environment Planning Result
+---------------------------------------
+
+We can now apply this to the StreetLearn domain. I found using an L1
+metric for the heuristic and a scaling factor of 1.2 works well. When
+using an L2 heuristic the scaling need to be 1.7, and the search cost is
+high.
+
+L1 works better probably because it is Manhattan.
+
+.. raw:: html
+
+   <p align="center">
+
+.. raw:: html
+
+   </p>
+
+We can compare the number of distance look-ups that are required among
+these methods:
+
+.. raw:: html
+
+   <p align="center">
+
+.. raw:: html
+
+   </p>
+
+With a learned reacheability heuristics, ``plan2vec`` should do better
+than ``A*`` with a Euclidean heuristic.
+
+(The planning lenght is not computed using the weights)
+
+TODOs
+-----
+
+-  [ ]
+-  [ ]
+
+Graph Interface
+---------------
+
+We need three methods:
+
+-  ``get_edge_data(node, node_2)``
+-  ``neighbors(node)``
+-  ``heuristics(next, goal)``
